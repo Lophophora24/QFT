@@ -48,7 +48,30 @@ void fill_phi()
 
 double F(int j, int i)
 {
-    return m * m * phi[j][i] * phi[j][i] / 2 + g * phi[j][i] * phi[j][i] * phi[j][i] * phi[j][i] / 4;
+    //return m * m * phi[j][i] * phi[j][i] / 2 + g * phi[j][i] * phi[j][i] * phi[j][i] * phi[j][i] / 4;
+
+    return pow(m, 4) / (6 * g) * cos(sqrt(6 * g) / m * phi[j][i]);
+
+    //return m * m * phi[j][i] * phi[j][i] / 2 + g * phi[j][i] * phi[j][i] * phi[j][i] * phi[j][i] / 4 + g * g / (20 * m * m) * pow(phi[j][i], 6);
+}
+
+void Sinh_Gordon()
+{
+    for (int j = 1; j < SIZE_T - 1; ++j) {
+        for (int i = 0; i < SIZE_X; ++i) {
+            if (i == 0) {
+                phi[j + 1][i] = r * r * phi[j][SIZE_X - 2] + 2 * (1 - r * r) * phi[j][i] + r * r * phi[j][i + 1] - phi[j - 1][i] - t * t * pow(m, 3) / sqrt(6 * g) * sinh(sqrt(6 * g) / m * phi[j][i]);
+            }
+            else
+            if (i == (SIZE_X - 1)) {
+                phi[j + 1][i] = r * r * phi[j][i - 1] + 2 * (1 - r * r) * phi[j][i] + r * r * phi[j][1] - phi[j - 1][i] - t * t * pow(m, 3) / sqrt(6 * g) * sinh(sqrt(6 * g) / m * phi[j][i]);
+            }
+            else
+            {
+                phi[j + 1][i] = r * r * phi[j][i - 1] + 2 * (1 - r * r) * phi[j][i] + r * r * phi[j][i + 1] - phi[j - 1][i] - t * t * pow(m, 3) / sqrt(6 * g) * sinh(sqrt(6 * g) / m * phi[j][i]);
+            }
+        }
+    }
 }
 
 void Strauss_Vazquez()
@@ -57,6 +80,7 @@ void Strauss_Vazquez()
         for (int i = 0; i < SIZE_X; ++i) {
             if (i == 0) {
                 double recent = 100;
+                phi[j + 1][i] = phi[j][i];
                 do {
                     recent = phi[j + 1][i];
                     if (phi[j + 1][i] == phi[j - 1][i]) {
@@ -65,12 +89,13 @@ void Strauss_Vazquez()
                     else {
                         phi[j + 1][i] = r * r * phi[j][SIZE_X - 2] + 2 * (1 - r * r) * phi[j][i] + r * r * phi[j][i + 1] - phi[j - 1][i] - t * t * (F(j + 1, i) - F(j - 1, i)) / (phi[j + 1][i] - phi[j - 1][i]);
                     }
-                    
+
                 } while (abs(recent - phi[j + 1][i]) > 1e-5);
             }
             else
             if (i == (SIZE_X - 1)) {
                 double recent = 100;
+                phi[j + 1][i] = phi[j][i];
                 do {
                     recent = phi[j + 1][i];
                     if (phi[j + 1][i] == phi[j - 1][i]) {
@@ -83,6 +108,7 @@ void Strauss_Vazquez()
             }
             else {
                 double recent = 100;
+                phi[j + 1][i] = phi[j][i];
                 do {
                     recent = phi[j + 1][i];
                     if (phi[j + 1][i] == phi[j - 1][i]) {
@@ -153,4 +179,5 @@ void solve_with_cond()
     generate_initial_conditions();
     fill_phi();
     Strauss_Vazquez();
+    //Sinh_Gordon();
 }

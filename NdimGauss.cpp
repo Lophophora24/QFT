@@ -145,7 +145,7 @@ void generate_initial_conditions() {
 		phi_0[i] = samples_phi(i);
 		//phi_0[i] = 0.1 * (1 + cos(2 * PI / 1.28 * x[i]));
 		//printf("Phi_averaged = %f\n", phi_averaged_with_eta);
-		pi_0[i] = samples_pi(i) - 1. * al * eta(x[i]) * pow(phi_averaged_with_eta, 0);
+		pi_0[i] = samples_pi(i) - 2. * al * eta(x[i]) * pow(phi_averaged_with_eta, 1);
 		//pi_0[i] = samples_pi(i);
 		//pi_0[i] = 0;
 		//pi_0[i] = samples_pi(i) - 1. * al * eta(x[i]);
