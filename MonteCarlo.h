@@ -1,20 +1,15 @@
 #pragma once
 
-#include "PARAMETRS.h"
-#include <stdio.h>
-#include <math.h>
+#include <iostream>
+#include "PARAMETERS.h"
 
 extern double x[SIZE_X];
-
+extern double time_[SIZE_T];
 extern double phi[SIZE_T][SIZE_X];
+extern double phi_exact[SIZE_T][SIZE_X];
 
-extern double Energy[SIZE_T];
+void solve_with_cond(int);
 
-void solve_with_cond();
-extern double phi_averaged_with_eta;
-
-double Wigner_func();
-
-extern int time_moments[11];
+void print_phi(double**);
 
 double F(int, int);

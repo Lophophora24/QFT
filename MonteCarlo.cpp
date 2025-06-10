@@ -1,144 +1,279 @@
-#include "MonteCarlo.h"
+п»ї#include "MonteCarlo.h"
+#include "omp.h"
 
-//----------------- Что будем усреднять --------------------//
-// Корреляционные функции (L/2, x)
-double Corr_function_t_0[SIZE_X];
-double Corr_function_t_1[SIZE_X];
-double Corr_function_t_2[SIZE_X];
-double Corr_function_t_3[SIZE_X];
-double Corr_function_t_4[SIZE_X];
-double Corr_function_t_5[SIZE_X];
+double phi_[SIZE_T][SIZE_X];                 // <П†(t,x)>
 
-// Корреляционные функции (x, x)
-double Corr_function_t_0_0[SIZE_X];
-double Corr_function_t_1_1[SIZE_X];
-double Corr_function_t_2_2[SIZE_X];
-double Corr_function_t_3_3[SIZE_X];
-double Corr_function_t_4_4[SIZE_X];
-double Corr_function_t_5_5[SIZE_X];
+											 // Оµ(t,x) = Оµ_kin(t,x) + Оµ_grad(t,x) + Оµ_inter(t,x)
+double energy_density_[SIZE_T][SIZE_X];      // <Оµ(t,x)> 
+double energy_density_kin[SIZE_T][SIZE_X];   // <Оµ_kin(t,x)>
+double energy_density_inter[SIZE_T][SIZE_X]; // <Оµ_inter(t,x)>
+double energy_density_grad[SIZE_T][SIZE_X];  // <Оµ_grad(t,x)>
 
-// Корреляционные функции (0, x)
-double Corr_function_t_0_0_0[SIZE_X];
-double Corr_function_t_1_1_1[SIZE_X];
-double Corr_function_t_2_2_2[SIZE_X];
-double Corr_function_t_3_3_3[SIZE_X];
-double Corr_function_t_4_4_4[SIZE_X];
-double Corr_function_t_5_5_5[SIZE_X];
-double Result = 0;
+											 // E = E_kin + E_grad + E_inter
+double energy_[SIZE_T];						 // E
+double energy_kin[SIZE_T];                   // E_kin
+double energy_inter[SIZE_T];                 // E_inter
+double energy_grad[SIZE_T];                  // E_grad
+						
+											 // Correlation functions
+double phi_0_0phi_t_0[SIZE_T];               // <П†(0,0)П†(t,0)>
+double phi_0_0phi_0_x[SIZE_X];               // <П†(0,0)П†(0,x)>
 
-double phi_aver[SIZE_X][11];
-double energy_aver[SIZE_T];
 
-double phi_4_aver[SIZE_T];
 
 void average()
 {
-	//FILE* samples;
-	//fopen_s(&samples, "samples_new.txt", "a+");
-	printf("Start to solve equations\n");
-	for (int i = 0; i < M; ++i) {
-		printf("...\n");
-		solve_with_cond();  // получили phi с гауссовыми начальными условиями
-		printf("Solved equation number # %d\n", i);
+	std::cout << "Starting average()....\n";
+	// Obnulenie vseh massivov //
+	for (int j = 0; j < SIZE_T; ++j) {
+		energy_[j]      = 0;
+		energy_kin[j]   = 0;
+		energy_inter[j] = 0;
+		energy_grad[j]  = 0;
+		for (int i = 0; i < SIZE_X; ++i) {
+			phi_[j][i]                 = 0;
+			energy_density_[j][i]      = 0;
 
-		for (int j = 0; j < SIZE_T; ++j) {
-			energy_aver[j] += Energy[j] / M;
+			energy_density_kin[j][i]   = 0;
+			energy_density_inter[j][i] = 0;
+			energy_density_grad[j][i]  = 0;
+			
+			phi_0_0phi_t_0[j]          = 0;
+			phi_0_0phi_0_x[i]          = 0;
 
-			//----------------------------------------------------------
+			
+		}
+	}
+
+	//std::cout << "Starting parallel section....\n";
+	//#pragma omp parallel reduction (+:phi_)
+	 
+		//#pragma omp parallel for		
+		for (int s = 1; s <= M; ++s) {
+			
+			//double phi[SIZE_T][SIZE_X];
 			/*
-			double int_multiply = 0;
-			for (int i = 0; i < SIZE_X; ++i) {
-				int_multiply += g_0 * pow(phi[j][i], 4) * h / (4. * TMP);
-			}
+			double** phi;
 
-			energy_aver[j] *= exp(-int_multiply);
-			*/
-			//----------------------------------------------------------
-		}
-
-		//------------------------------------------------------
-		/*
-		for (int j = 0; j < SIZE_T; ++j) {
-			double int_multiply = 0;
-			for (int i = 0; i < SIZE_X; ++i) {
-				int_multiply += g_0 * pow(phi[j][i], 4) * h / (4. * TMP);
-			}
-
-			phi_4_aver[j] += exp(-int_multiply) / M;
-		}
-
-		for (int j = 0; j < SIZE_T; ++j) {
-			energy_aver[j] /= phi_4_aver[j];
-		}
-		*/
-		//------------------------------------------------------
-		
-		for (int k = 0; k < 11; ++k) {
-			//--------------------------------------------------------------------
-			/*
-			double multip = 0;
-
-			for (int j = 0; j < SIZE_X; ++j) {
-				multip += g_0 * pow(phi[time_moments[k]][j], 4) * h / (4. * TMP);
+			phi = (double**)malloc(SIZE_T * sizeof(double*));
+			//std::cout << phi << '\n';
+			for (int j = 0; j < SIZE_T; ++j) {
+				phi[j] = (double*)malloc(SIZE_X * sizeof(double));
+				for (int i = 0; i < SIZE_X; ++i) {
+					phi[j][i] = 0;
+				}
 			}
 			*/
+			solve_with_cond(s - 1);
 
-
-			//--------------------------------------------------------------------
-			for (int j = 0; j < SIZE_X - 1; ++j) {
-				//phi_aver[j][k] += (phi[time_moments[k]][j] * exp(phi_averaged_with_eta)) / M;
-				/*
-				phi_aver[j][k] += (phi[time_moments[k]][j] * phi[time_moments[0]][0]) / M;
-				phi_aver[SIZE_X - 1][k] = phi_aver[0][k];
-				*/
-				//if (j == SIZE_X - 1) {
-					//phi_aver[j][k] += (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M;
-					//phi_aver[j][k] += 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M + 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][j - 1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][j - 1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M;
-				//}
-				
-				//----------------------------- Energy density ----------------------------//
-				
-				if (j == 0) {
-					phi_aver[j][k] += 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][j + 1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][j + 1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M + 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][SIZE_X-2] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][SIZE_X-2] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M;
-				}
-				else {
-					phi_aver[j][k] += 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][j + 1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][j + 1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M + 0.5 * (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * (phi[time_moments[k] + 1][j - 1] - phi[time_moments[k] + 1][j]) / h * (phi[time_moments[k]][j - 1] - phi[time_moments[k]][j]) / h + (F(time_moments[k] + 1, j) + F(time_moments[k], j)) / 2) / M;	
-				}
-
-				phi_aver[SIZE_X - 1][k] = phi_aver[0][k];
-				
-				//----------------------------- Energy density ----------------------------//
-
-				/*if (j == SIZE_X - 1) {
-					phi_aver[j][k] += (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * pow((phi[time_moments[k]][1] - phi[time_moments[k]][j]) / h, 2) + 0.5 * F(time_moments[k], j)) / M;
-				}
-				else {
-					phi_aver[j][k] += (0.5 * pow((phi[time_moments[k] + 1][j] - phi[time_moments[k]][j]) / t, 2) + 0.5 * pow((phi[time_moments[k]][j + 1] - phi[time_moments[k]][j]) / h, 2) + 0.5 * F(time_moments[k], j)) / M;
-				}*/
-
-				//phi_aver[j][k] *= exp(-multip);
+			// Fill the file with phi[t][x]
+			std::cout << "solved eq # " << s << '\n';
+			/*
+			double en[SIZE_T];
+			for (int j = 0; j < SIZE_T - 1; ++j) {
+				en[j] = 0;
 			}
-			//phi_aver[SIZE_X-1][k] *= exp(-multip);
+			for (int j = 0; j < SIZE_T - 1; ++j) {
+				for (int i = 0; i < SIZE_X; ++i) {
+					int i_prev = i - 1;
+					int i_next = i + 1;
+
+					if (i == 0) {
+						i_prev = SIZE_X - 2;
+					}
+					else if (i == SIZE_X - 1) {
+						i_next = 1;
+					}
+					en[j] += h * (0.5 * (phi[j + 1][i] - phi[j][i]) / t + 0.5 * (phi[j + 1][i_next] - phi[j + 1][i]) / h * (phi[j][i_next] - phi[j][i]) / h + 0.5 * (F(j + 1, i) + F(j, i)));
+				}
+			}
+
+			for (int j = 0; j < SIZE_T; ++j) {
+				printf("%10.4lf\n", en[j]);
+			}*/
+
+			//print_phi(phi);
+			
+			//std::cout << omp_get_thread_num() << '\n';
+			//std::cout << omp_get_max_threads() << '\n';
+
+			//#pragma omp parallel for
+			for (int j = 0; j < SIZE_T - 1; ++j) {
+				for (int i = 0; i < SIZE_X; ++i) {
+					int i_prev = i - 1;
+					int i_next = i + 1;
+
+					if (i == 0) {
+						i_prev = SIZE_X - 2;
+					}
+					else if (i == SIZE_X - 1) {
+						i_next = 1;
+					}
+
+					//#pragma omp atomic 
+					phi_[j][i] += phi[j][i] / M;
+
+					//energy_density_kin[j][i] += (0.5 * pow(((phi[j + 1][i] - phi[j][i]) / t), 2)) / M;
+
+					//energy_density_inter[j][i] += (0.25 * g * pow(phi[j][i], 4)) / M;
+
+					energy_density_[j][i] += (0.5 * (phi[j + 1][i] - phi[j][i]) / t * (phi[j + 1][i] - phi[j][i]) / t + 0.5 * (phi[j + 1][i_next] - phi[j + 1][i]) / h * (phi[j][i_next] - phi[j][i]) / h + 0.5 * (F(j + 1, i) + F(j, i))) / M;
+
+					energy_density_kin[j][i] += (0.5 * (phi[j + 1][i] - phi[j][i]) / t * (phi[j + 1][i] - phi[j][i]) / t) / M;
+
+					energy_density_grad[j][i] += (0.5 * (phi[j + 1][i_next] - phi[j + 1][i]) / h * (phi[j][i_next] - phi[j][i]) / h) / M;
+
+					energy_density_inter[j][i] += (0.5 * (F(j + 1, i) + F(j, i))) / M;
+
+					//energy_density_[j][i] += (energy_density_kin[j][i] + energy_density_grad[j][i] + energy_density_inter[j][i]);
+
+					//energy_[j] += energy_density_[j][i] * h;
+					//energy_kin[j] += energy_density_kin[j][i] * h;
+					//energy_inter[j] += energy_density_inter[j][i] * h;
+					//energy_grad[j] += energy_density_grad[j][i] * h;
+
+					/*
+					if (i == SIZE_X - 1) {
+						energy_density_[j][i] += (0.5 * pow(((phi[j + 1][i] - phi[j][i]) / t), 2) + 0.5 * ((phi[j + 1][1] - phi[j + 1][i]) / h) * ((phi[j][1] - phi[j][i]) / h) + 0.5 * (F(j + 1, i, phi) + F(j, i, phi))) / M;
+						//energy_density_grad[j][i] += (0.5 * ((phi[j + 1][1] - phi[j + 1][i]) / h) * ((phi[j][1] - phi[j][i]) / h)) / M;
+					}
+					else {
+						energy_density_[j][i] += (0.5 * pow(((phi[j + 1][i] - phi[j][i]) / t), 2) + 0.5 * ((phi[j + 1][i + 1] - phi[j + 1][i]) / h) * ((phi[j][i + 1] - phi[j][i]) / h) + 0.5 * (F(j + 1, i, phi) + F(j, i, phi))) / M;
+						//energy_density_grad[j][i] += (0.5 * ((phi[j + 1][i + 1] - phi[j + 1][i]) / h) * ((phi[j][i + 1] - phi[j][i]) / h)) / M;
+					}
+					*/
+					
+				}
+				phi_0_0phi_t_0[j] += (phi[0][0] * phi[j][0]) / M;
+			}
+
+			for (int j = 0; j < SIZE_T - 1; ++j) {
+				for (int i = 0; i < SIZE_X - 1; ++i) {
+					
+					energy_[j] += energy_density_[j][i] * h;
+
+					energy_kin[j] += energy_density_kin[j][i] * h;
+					energy_grad[j] += energy_density_grad[j][i] * h;
+					energy_inter[j] += energy_density_inter[j][i] * h;
+
+					//energy_[j] += (energy_kin[j] + energy_grad[j] + energy_inter[j]);
+				}
+			}
+
+			for (int i = 0; i < SIZE_X; ++i) {
+				phi_0_0phi_0_x[i] += (phi[0][0] * phi[0][i]) / M;
+			} 
+
+
+			for (int i = 0; i < SIZE_X; ++i) {
+				phi_[SIZE_T - 1][i] = phi_[SIZE_T - 2][i];
+				energy_density_[SIZE_T - 1][i] = energy_density_[SIZE_T - 2][i];
+				energy_density_kin[SIZE_T - 1][i] = energy_density_kin[SIZE_T - 2][i];
+				energy_density_grad[SIZE_T - 1][i] = energy_density_grad[SIZE_T - 2][i];
+				energy_density_inter[SIZE_T - 1][i] = energy_density_inter[SIZE_T - 2][i];
+			}
+			energy_[SIZE_T - 1] = energy_[SIZE_T - 2];
+			energy_kin[SIZE_T - 1] = energy_kin[SIZE_T - 2];
+			energy_grad[SIZE_T - 1] = energy_grad[SIZE_T - 2];
+			energy_inter[SIZE_T - 1] = energy_inter[SIZE_T - 2];
+
+			phi_0_0phi_t_0[SIZE_T - 1] = phi_0_0phi_t_0[SIZE_T - 2];
+			
+
 		}
+	
+}
+
+void calculate_observables()
+{
+	FILE* phi_aver;
+	fopen_s(&phi_aver, "phi_aver.txt", "w+");
+
+	FILE* phi_exact_;
+	fopen_s(&phi_exact_, "phi_exact.txt", "w+");
+
+	FILE* energy_dens_aver;
+	fopen_s(&energy_dens_aver, "energy_dens_aver.txt", "w+");
+	//FILE* energy_dens_kin_aver;
+	//fopen_s(&energy_dens_kin_aver, "energy_dens_kin_aver.txt", "w+");
+	//FILE* energy_dens_inter_aver;
+	//fopen_s(&energy_dens_inter_aver, "energy_dens_inter_aver.txt", "w+");
+	//FILE* energy_dens_grad_aver;
+	//fopen_s(&energy_dens_grad_aver, "energy_dens_grad_aver.txt", "w+");
+
+	FILE* energy_aver;
+	fopen_s(&energy_aver, "energy_aver.txt", "w+");
+
+	FILE* phi_0_0phi_t_0_aver;
+	fopen_s(&phi_0_0phi_t_0_aver, "phi_0_0phi_t_0_aver.txt", "w+");
+
+	FILE* phi_0_0phi_0_x_aver;
+	fopen_s(&phi_0_0phi_0_x_aver, "phi_0_0phi_0_x_aver.txt", "w+");
+
+	fprintf(energy_dens_aver, "%20.3lf", " ");
+	fprintf(phi_aver, "%20.3lf", " ");
+	fprintf(phi_exact_, "%20.3lf", " ");
+	for (int j = 0; j < SIZE_T; ++j) {
 		
-		// сделать усреднение <phi_n, phi_m> это должно совпадать с коррел. матрицей???
-		// сделать усреднение <phi_i, phi_j, phi_n, phi_m> = <phi_i, phi_j><phi_n, phi_m> +
-		// + <><> + <><> проверить, что это соотношение выполняется 
-		//std::cout << "i = " << i << "  res = " << Result << '\n';
+		fprintf(energy_dens_aver, "%20.3lf", time_[j]);
+		fprintf(phi_aver, "%20.3lf", time_[j]);
+		fprintf(phi_exact_, "%20.3lf", time_[j]);
 	}
-	/*
-	for (int k = 0; k < 11; ++k) {
-		for (int j = 0; j < SIZE_X - 1; ++j) {
-			phi_aver[j][k] /= phi_4_aver[time_moments[k]];
+	fprintf(energy_dens_aver, "\n");
+	fprintf(phi_aver, "\n");
+	fprintf(phi_exact_, "\n");
+
+	for (int i = 0; i < SIZE_X; ++i) {
+		fprintf(phi_aver, "%10.3lf", x[i]);
+		fprintf(phi_exact_, "%10.3lf", x[i]);
+		fprintf(energy_dens_aver, "%10.3lf", x[i]);
+		for (int j = 0; j < SIZE_T; ++j) {
+			fprintf(phi_aver, "%20.3lf", phi_[j][i]);
+			fprintf(phi_exact_, "%20.3lf", phi_exact[j][i]);
+			fprintf(energy_dens_aver, "%20.3lf", energy_density_[j][i]);
+			//fprintf(energy_dens_kin_aver, "%20.3lf", energy_density_kin[j][i]);
+			//fprintf(energy_dens_inter_aver, "%20.3lf", energy_density_inter[j][i]);
+			//fprintf(energy_dens_grad_aver, "%20.3lf", energy_density_grad[j][i]);
 		}
+		fprintf(phi_aver, "\n");
+		fprintf(phi_exact_, "\n");
+		fprintf(energy_dens_aver, "\n");
 
-		phi_aver[SIZE_X - 1][k] = phi_aver[0][k];
+		//fprintf(energy_dens_kin_aver, "\n");
+		//fprintf(energy_dens_inter_aver, "\n");
+		//fprintf(energy_dens_grad_aver, "\n");
+
+		//fprintf(energy_aver, "%20.3lf %20.3lf %20.3lf %20.3lf\n", energy_[j], energy_kin[j], energy_inter[j], energy_grad[j]);
+
+		//fprintf(phi_0_0phi_t_0_aver, "%20.3lf\n", phi_0_0phi_t_0[j]);
 	}
-	*/
 
 
 
-	//fclose(samples);
+	for (int j = 0; j < SIZE_T; ++j) {
+		fprintf(energy_aver, "%10.3lf%20.3lf%20.3lf%20.3lf%20.3lf\n", time_[j], energy_[j], energy_kin[j], energy_grad[j], energy_inter[j]);
+		fprintf(phi_0_0phi_t_0_aver, "%10.3lf%20.3lf\n", time_[j], phi_0_0phi_t_0[j]);
 
-	//std::cout << "Result: " << Result << '\n';
+	}
+
+	for (int i = 0; i < SIZE_X; ++i) {
+		fprintf(phi_0_0phi_0_x_aver, "%10.3lf%20.3lf\n", x[i], phi_0_0phi_0_x[i]);
+	}
+
+	//fprintf(phi_aver, "\n");
+	//fprintf(energy_dens_aver, "\n");
+	//fprintf(energy_dens_kin_aver, "\n");
+	//fprintf(energy_dens_inter_aver, "\n");
+	//fprintf(energy_dens_grad_aver, "\n");
+	//fprintf(energy_aver, "\n");
+
+	fclose(phi_aver);
+	fclose(phi_exact_);
+	fclose(energy_dens_aver);
+	//fclose(energy_dens_kin_aver);
+	//fclose(energy_dens_inter_aver);
+	//fclose(energy_dens_grad_aver);
+	fclose(energy_aver);
+	fclose(phi_0_0phi_t_0_aver);
+	fclose(phi_0_0phi_0_x_aver);
 }
